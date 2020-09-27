@@ -29,6 +29,7 @@ cc_library {
         "StagefrightMetadataRetriever.cpp",
         "StagefrightRecorder.cpp",
         "TestPlayerStub.cpp",
+	    "RemoteDisplay.cpp",
     ],
 
     shared_libs: [
@@ -67,6 +68,7 @@ cc_library {
         "libutils",
         "packagemanager_aidl-cpp",
         "librockit_interface",
+	    "libstagefright_wfd",
     ],
 
     header_libs: [
@@ -97,7 +99,7 @@ cc_library {
         "vendor/rockchip/hardware/interfaces/rockit/include",
         "vendor/rockchip/hardware/interfaces/rockit/include/rt_base",
         "vendor/rockchip/hardware/interfaces/rockit/direct/include",
-
+	    "frameworks/av/media/libstagefright/wifi-display",
     ],
     local_include_dirs: ["include"],
 
