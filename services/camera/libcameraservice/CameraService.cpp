@@ -77,7 +77,9 @@
 #include "utils/TagMonitor.h"
 #include "utils/CameraThreadState.h"
 #include "utils/CameraServiceProxyWrapper.h"
-
+#ifdef HDMI_ENABLE
+#include <rockchip/hardware/hdmi/1.0/IHdmi.h>
+#endif
 namespace {
     const char* kPermissionServiceName = "permission";
 }; // namespace anonymous
@@ -435,6 +437,20 @@ void CameraService::onDeviceStatusChanged(const String8& id,
             addStates(id);
 
             updateStatus(newStatus, id);
+#ifdef HDMI_ENABLE
+            sp<rockchip::hardware::hdmi::V1_0::IHdmi> client = rockchip::hardware::hdmi::V1_0::IHdmi::getService();
+            ::android::hardware::hidl_string deviceId;
+            if(client.get()!= nullptr){
+                client->getHdmiDeviceId( [&](const ::android::hardware::hidl_string &id){
+                        deviceId = id.c_str();
+                        ALOGD("cameraId:%s",id.c_str());
+                });
+            }
+            if(client.get()!= nullptr && strstr(id.string(),deviceId.c_str())){
+                client->onStatusChange((uint32_t)newHalStatus);
+                ALOGD("onStatusChange:%d",newHalStatus);
+            }
+#endif
         } else {
             ALOGE("%s: Bad camera ID %s", __FUNCTION__, id.string());
         }
@@ -481,6 +497,20 @@ void CameraService::onDeviceStatusChanged(const String8& id,
         }
         updateStatus(newStatus, id);
     }
+#ifdef HDMI_ENABLE
+    sp<rockchip::hardware::hdmi::V1_0::IHdmi> client = rockchip::hardware::hdmi::V1_0::IHdmi::getService();
+    ::android::hardware::hidl_string deviceId;
+    if(client.get()!= nullptr){
+        client->getHdmiDeviceId( [&](const ::android::hardware::hidl_string &id){
+                deviceId = id.c_str();
+                ALOGD("cameraId:%s",id.c_str());
+        });
+    }
+    if(client.get()!= nullptr && strstr(id.string(),deviceId.c_str())){
+        client->onStatusChange((uint32_t)newHalStatus);
+        ALOGD("onStatusChange:%d",newHalStatus);
+    }
+#endif
 }
 
 void CameraService::onDeviceStatusChanged(const String8& id,

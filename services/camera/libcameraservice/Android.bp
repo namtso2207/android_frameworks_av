@@ -165,6 +165,7 @@ cc_library_shared {
         "android.hardware.camera.device@3.7",
         "android.hardware.camera.device-V1-ndk",
         "media_permission-aidl-cpp",
+        "rockchip.hardware.hdmi@1.0",
     ],
 
     static_libs: [
@@ -174,6 +175,14 @@ cc_library_shared {
         "media_permission-aidl-cpp",
         "libcameraservice_device_independent",
     ],
+
+    product_variables: {
+       cameraSupportHDMI: {
+           cppflags:[
+               "-DHDMI_ENABLE",
+           ],
+       }
+    },
 
     export_shared_lib_headers: [
         "libbinder",
