@@ -204,7 +204,8 @@ void Engine::filterOutputDevicesForStrategy(legacy_strategy strategy,
             if (desc->isActive() && !audio_is_linear_pcm(desc->getFormat())) {
                 availableOutputDevices.remove(desc->devices().getDevicesFromTypes({
                         AUDIO_DEVICE_OUT_HDMI, AUDIO_DEVICE_OUT_SPDIF,
-                        AUDIO_DEVICE_OUT_HDMI_ARC, AUDIO_DEVICE_OUT_HDMI_EARC}));
+                        AUDIO_DEVICE_OUT_HDMI_ARC, AUDIO_DEVICE_OUT_HDMI_EARC,
+                        AUDIO_DEVICE_OUT_HDMI_1, AUDIO_DEVICE_OUT_SPDIF_1, }));
             }
         }
         } break;
@@ -383,6 +384,16 @@ DeviceVector Engine::getDevicesForStrategyInt(legacy_strategy strategy,
             // no sonification on aux digital (e.g. HDMI)
             devices2 = availableOutputDevices.getDevicesFromType(AUDIO_DEVICE_OUT_AUX_DIGITAL);
         }
+        //priority Wired > a2dp > hdmi > hdmi 1 > spdif > spdif 1
+        if ((devices2.isEmpty()) && (strategy != STRATEGY_SONIFICATION)) {
+            devices2 = availableOutputDevices.getDevicesFromType(AUDIO_DEVICE_OUT_HDMI_1);
+        }
+        if ((devices2.isEmpty()) && (strategy != STRATEGY_SONIFICATION)) {
+            devices2 = availableOutputDevices.getDevicesFromType(AUDIO_DEVICE_OUT_SPDIF);
+        }
+        if ((devices2.isEmpty()) && (strategy != STRATEGY_SONIFICATION)) {
+            devices2 = availableOutputDevices.getDevicesFromType(AUDIO_DEVICE_OUT_SPDIF_1);
+        }
         if ((devices2.isEmpty()) &&
                 (getForceUse(AUDIO_POLICY_FORCE_FOR_DOCK) == AUDIO_POLICY_FORCE_ANALOG_DOCK)) {
             devices2 = availableOutputDevices.getDevicesFromType(
@@ -394,11 +405,10 @@ DeviceVector Engine::getDevicesForStrategyInt(legacy_strategy strategy,
         }
         DeviceVector devices3;
         if (strategy == STRATEGY_MEDIA) {
-            // ARC, SPDIF and AUX_LINE can co-exist with others.
+            // ARC and AUX_LINE can co-exist with others.
             devices3 = availableOutputDevices.getDevicesFromTypes({
                     AUDIO_DEVICE_OUT_HDMI_ARC, AUDIO_DEVICE_OUT_HDMI_EARC,
-                    AUDIO_DEVICE_OUT_SPDIF, AUDIO_DEVICE_OUT_AUX_LINE,
-                    });
+                    AUDIO_DEVICE_OUT_AUX_LINE, });
         }
 
         devices2.add(devices3);

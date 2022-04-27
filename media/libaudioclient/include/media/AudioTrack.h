@@ -35,6 +35,7 @@
 #include "android/media/IAudioTrack.h"
 #include "android/media/IAudioTrackCallback.h"
 
+#define MultiAudioTest 0
 namespace android {
 
 using content::AttributionSourceState;
@@ -1552,7 +1553,9 @@ private:
     MediaMetrics mMediaMetrics;
     std::string mMetricsId;  // GUARDED_BY(mLock), could change in createTrack_l().
     std::string mCallerName; // for example "aaudio"
-
+#if MultiAudioTest
+    String16    mPackageName;
+#endif
     // report error to mediametrics.
     void reportError(status_t status, const char *event, const char *message) const;
 

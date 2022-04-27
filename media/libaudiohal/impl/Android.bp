@@ -1,3 +1,24 @@
+bootstrap_go_package {
+    name: "soong-libaudiohal",
+    pkgPath: "android/soong/libaudiohal",
+    deps: [
+        "blueprint",
+        "blueprint-pathtools",
+        "soong",
+        "soong-android",
+        "soong-cc",
+        "soong-genrule",
+    ],
+    srcs: [
+          "Android.go",
+    ],
+    pluginFor: ["soong_build"],
+}
+
+cc_libaudiohal {
+   name: "cc_libaudiohal_defaults",
+}
+
 package {
     // See: http://go/android-license-faq
     // A large-scale-change added 'default_applicable_licenses' to import
@@ -9,6 +30,7 @@ package {
 
 filegroup {
     name: "audio_core_hal_client_sources",
+
     srcs: [
         "CoreConversionHelperHidl.cpp",
         "DeviceHalHidl.cpp",
@@ -29,7 +51,7 @@ filegroup {
 
 cc_defaults {
     name: "libaudiohal_default",
-
+    defaults: ["cc_libaudiohal_defaults"],
     cflags: [
         "-Wall",
         "-Wextra",

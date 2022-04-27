@@ -40,6 +40,11 @@
 #include <media/MediaMetricsItem.h>
 #include <media/TypeConverter.h>
 
+#if SUPPORT_MULTIAUDIO
+#include <media/RKMultiAudio.h>
+#include <binder/PermissionController.h>
+#endif
+
 #define WAIT_PERIOD_MS                  10
 #define WAIT_STREAM_END_TIMEOUT_SEC     120
 static const int kMaxLoopCountNotifications = 32;
@@ -557,6 +562,18 @@ status_t AudioTrack::set(
     uid_t uid = VALUE_OR_FATAL(aidl2legacy_int32_t_uid_t(attributionSource.uid));
     pid_t pid = VALUE_OR_FATAL(aidl2legacy_int32_t_pid_t(attributionSource.pid));
     std::string errorMessage;
+#if SUPPORT_MULTIAUDIO
+#if MultiAudioTest
+    Vector<String16> packages;
+    PermissionController{}.getPackagesForUid(uid, packages);
+    if(!packages.isEmpty()) {
+        ALOGD("RKMultiAudio:package name: %s uid %d",String8(packages[0]).string(),uid);
+        mPackageName = packages[0];
+    } else {
+        mPackageName = String16("default");
+    }
+#endif
+#endif
     // Note mPortId is not valid until the track is created, so omit mPortId in ALOG for set.
     ALOGV("%s(): streamType %d, sampleRate %u, format %#x, channelMask %#x, frameCount %zu, "
           "flags #%x, notificationFrames %d, sessionId %d, transferType %d, uid %d, pid %d",
@@ -1951,11 +1968,36 @@ status_t AudioTrack::createTrack_l()
         input.speed  = !isPurePcmData_l() || isOffloadedOrDirect_l() ? 1.0f :
                         max(mMaxRequiredSpeed, mPlaybackRate.mSpeed);
     }
+
+#if SUPPORT_MULTIAUDIO
+    audio_session_t sessionid = mSessionId;
+#if MultiAudioTest
+    String8 tmp = String8(mPackageName);
+    if (strstr(tmp.string(), "RockVideoPlayer")) {
+        sessionid = (audio_session_t)65;
+    } else if (strstr(tmp.string(), "gallery3d")) {
+        sessionid = (audio_session_t)81;
+    } else if (strstr(tmp.string(), "mxtech")) {
+        sessionid = (audio_session_t)57;
+    }
+#endif
+    audio_port_handle_t deviceId = mSelectedDeviceId;
+    audio_stream_type_t streamType = mStreamType;
+    bool boo = false;
+    audio_devices_t device = AUDIO_DEVICE_OUT_SPEAKER;
+    multiaudio_A(sessionid, &deviceId, streamType, &boo, &device);
+#endif
+
     input.flags = mFlags;
     input.frameCount = mReqFrameCount;
     input.notificationFrameCount = mNotificationFramesReq;
     input.selectedDeviceId = mSelectedDeviceId;
+
+#if SUPPORT_MULTIAUDIO
+    input.sessionId = sessionid;
+# else
     input.sessionId = mSessionId;
+#endif
     input.audioTrackCallback = mAudioTrackCallback;
 
     media::CreateTrackResponse response;
@@ -1982,6 +2024,15 @@ status_t AudioTrack::createTrack_l()
     mRoutedDeviceId = output.selectedDeviceId;
     mSessionId = output.sessionId;
     mStreamType = output.streamType;
+
+#if SUPPORT_MULTIAUDIO
+    sessionid = mSessionId;
+    deviceId = mRoutedDeviceId;
+    streamType = mStreamType;
+    //boo = false;
+    //device = AUDIO_DEVICE_OUT_SPEAKER;
+    multiaudio_B(sessionid, &deviceId, streamType, &boo, &device);
+#endif
 
     mSampleRate = output.sampleRate;
     if (mOriginalSampleRate == 0) {
@@ -2042,6 +2093,7 @@ status_t AudioTrack::createTrack_l()
                   __func__, mPortId, mReqFrameCount, mFrameCount);
         }
     }
+
     mFlags = output.flags;
 
     //mOutput != output includes the case where mOutput == AUDIO_IO_HANDLE_NONE for first creation
