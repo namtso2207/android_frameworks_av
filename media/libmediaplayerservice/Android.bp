@@ -66,6 +66,7 @@ cc_library {
         "libstagefright_httplive",
         "libutils",
         "packagemanager_aidl-cpp",
+        "librockit_interface",
     ],
 
     header_libs: [
@@ -92,6 +93,12 @@ cc_library {
         "libmediautils_headers",
     ],
 
+    include_dirs: [
+        "vendor/rockchip/hardware/interfaces/rockit/include",
+        "vendor/rockchip/hardware/interfaces/rockit/include/rt_base",
+        "vendor/rockchip/hardware/interfaces/rockit/direct/include",
+
+    ],
     local_include_dirs: ["include"],
 
     export_include_dirs: [

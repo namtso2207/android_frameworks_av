@@ -31,12 +31,33 @@
 
 #include "TestPlayerStub.h"
 #include <nuplayer/NuPlayerDriver.h>
+#include "RockitPlayerInterface.h"
 
 namespace android {
 
 Mutex MediaPlayerFactory::sLock;
 MediaPlayerFactory::tFactoryMap MediaPlayerFactory::sFactoryMap;
 bool MediaPlayerFactory::sInitComplete = false;
+
+static status_t getFileName(int fd,String8 *FilePath) {
+    static ssize_t link_dest_size;
+    static char link_dest[PATH_MAX];
+    const char *ptr = NULL;
+    String8 path;
+    path.appendFormat("/proc/%d/fd/%d", getpid(), fd);
+
+    if ((link_dest_size = readlink(path.string(), link_dest, sizeof(link_dest)-1)) < 0) {
+        return errno;
+    } else {
+        link_dest[link_dest_size] = '\0';
+    }
+
+    path = link_dest;
+    ptr = path.string();
+    *FilePath = String8(ptr);
+
+    return OK;
+}
 
 status_t MediaPlayerFactory::registerFactory_l(IFactory* factory,
                                                player_type type) {
@@ -62,7 +83,17 @@ status_t MediaPlayerFactory::registerFactory_l(IFactory* factory,
 }
 
 static player_type getDefaultPlayerType() {
-    return NU_PLAYER;
+    char value[PROPERTY_VALUE_MAX];
+    if (property_get("cts_gts.status", value, NULL)
+        && !strcasecmp("true", value)){
+        return NU_PLAYER;
+    }
+
+    if (property_get("use_nuplayer", value, NULL)
+        && !strcasecmp("true", value)) {
+        return NU_PLAYER;
+    }
+    return ROCKIT_PLAYER;
 }
 
 status_t MediaPlayerFactory::registerFactory(IFactory* factory,
@@ -75,6 +106,61 @@ void MediaPlayerFactory::unregisterFactory(player_type type) {
     Mutex::Autolock lock_(&sLock);
     sFactoryMap.removeItem(type);
 }
+
+class RockitPlayerFactory : public MediaPlayerFactory::IFactory {
+    public:
+    virtual float scoreFactory(const sp<IMediaPlayer>& /*client*/,
+                               const char* url,
+                               float curScore) {
+        static const float kOurScore = 0.9;
+
+        if (kOurScore <= curScore)
+            return 0.0;
+
+        if (!strncasecmp("http://", url, 7)
+            || !strncasecmp("https://", url, 8)
+            || !strncasecmp("file://", url, 7)) {
+            char value[PROPERTY_VALUE_MAX];
+            if (property_get("cts_gts.status", value, NULL)
+                && !strcasecmp("true", value)){
+                    return 0.0;
+            }
+
+            if (property_get("use_nuplayer", value, NULL)
+                && !strcasecmp("true", value)) {
+                    return 0.0;
+            }
+
+            return kOurScore;
+        }
+
+        if (!strncasecmp("rtsp://", url, 7)) {
+            return kOurScore;
+        }
+
+        return 0.0;
+    }
+
+    virtual float scoreFactory(const sp<IMediaPlayer>& /*client*/,
+                               const sp<IStreamSource>& /*source*/,
+                               float /*curScore*/) {
+        return 0.0;
+    }
+
+    virtual float scoreFactory(const sp<IMediaPlayer>& /*client*/,
+                               const sp<DataSource>& /*source*/,
+                               float /*curScore*/) {
+        // Rockit player supports setting a DataSource source directly.
+        return 0.0;
+    }
+
+    virtual sp<MediaPlayerBase> createPlayer(pid_t pid) {
+        (void)pid;
+        ALOGD("create Rockit Player");
+        return new RockitPlayerClient();
+    }
+};
+
 
 #define GET_PLAYER_TYPE_IMPL(a...)                      \
     Mutex::Autolock lock_(&sLock);                      \
@@ -102,6 +188,10 @@ void MediaPlayerFactory::unregisterFactory(player_type type) {
 
 player_type MediaPlayerFactory::getPlayerType(const sp<IMediaPlayer>& client,
                                               const char* url) {
+    if (strstr(url,".ogg")
+        || strstr(url,".apk")) {
+        return NU_PLAYER;
+    }
     GET_PLAYER_TYPE_IMPL(client, url);
 }
 
@@ -109,6 +199,19 @@ player_type MediaPlayerFactory::getPlayerType(const sp<IMediaPlayer>& client,
                                               int fd,
                                               int64_t offset,
                                               int64_t length) {
+    String8 filePath;
+    getFileName(fd,&filePath);
+    if (strstr(filePath.string(), ".ogg")
+        || strstr(filePath.string(), ".mid")
+        || strstr(filePath.string(), ".MID")
+        || strstr(filePath.string(), ".mp3")
+        || strstr(filePath.string(), ".apk")
+        || strstr(filePath.string(), "notification_sound_cache")
+        || strstr(filePath.string(), "ringtone_cache")
+        || strstr(filePath.string(), "alarm_alert_cache")) {
+        return NU_PLAYER;
+    }
+
     GET_PLAYER_TYPE_IMPL(client, fd, offset, length);
 }
 
@@ -249,6 +352,10 @@ void MediaPlayerFactory::registerBuiltinFactories() {
         delete factory;
     factory = new TestPlayerFactory();
     if (registerFactory_l(factory, TEST_PLAYER) != OK)
+        delete factory;
+
+    factory = new RockitPlayerFactory();
+    if (registerFactory_l(factory, ROCKIT_PLAYER) != OK)
         delete factory;
 
     sInitComplete = true;

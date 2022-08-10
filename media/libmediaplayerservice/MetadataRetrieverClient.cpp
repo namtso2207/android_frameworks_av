@@ -41,6 +41,7 @@
 #include <private/media/VideoFrame.h>
 #include "MetadataRetrieverClient.h"
 #include "StagefrightMetadataRetriever.h"
+#include "RockitMetadataRetriever.h"
 #include "MediaPlayerFactory.h"
 
 namespace android {
@@ -84,11 +85,22 @@ void MetadataRetrieverClient::disconnect()
 static sp<MediaMetadataRetrieverBase> createRetriever(player_type playerType)
 {
     sp<MediaMetadataRetrieverBase> p;
+    char value[PROPERTY_VALUE_MAX];
     switch (playerType) {
         case STAGEFRIGHT_PLAYER:
         case NU_PLAYER:
         {
             p = new StagefrightMetadataRetriever;
+            break;
+        }
+        case ROCKIT_PLAYER:
+        {
+            if (property_get("cts_gts.status", value, NULL)
+                    && !strcasecmp("true", value)) {
+                p = new StagefrightMetadataRetriever;
+            } else {
+                p = new RockitMetadataRetriever;
+            }
             break;
         }
         default:
