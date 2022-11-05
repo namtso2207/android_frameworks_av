@@ -47,6 +47,18 @@ static const String16 sModifyPhoneState("android.permission.MODIFY_PHONE_STATE")
 static const String16 sModifyAudioRouting("android.permission.MODIFY_AUDIO_ROUTING");
 static const String16 sCallAudioInterception("android.permission.CALL_AUDIO_INTERCEPTION");
 
+// A trusted calling UID may specify the client UID as part of a binder interface call.
+// otherwise the calling UID must be equal to the client UID.
+static bool isTrustedCallingUid(uid_t uid) {
+    switch (uid) {
+    case AID_MEDIA:
+    case AID_AUDIOSERVER:
+        return true;
+    default:
+        return false;
+    }
+}
+
 static String16 resolveCallingPackage(PermissionController& permissionController,
         const std::optional<String16> opPackageName, uid_t uid) {
     if (opPackageName.has_value() && opPackageName.value().size() > 0) {
@@ -121,6 +133,10 @@ static bool checkRecordingInternal(const AttributionSourceState& attributionSour
     // user is active, but it is a core system service so let it through.
     // TODO(b/141210120): UserManager.DISALLOW_RECORD_AUDIO should not affect system user 0
     uid_t uid = VALUE_OR_FATAL(aidl2legacy_int32_t_uid_t(attributionSource.uid));
+    if(isTrustedCallingUid(uid)) {
+        ALOGD("Rockchip recordingAllowed true.");
+        return true;
+    }
     if (isAudioServerOrMediaServerOrSystemServerOrRootUid(uid)) return true;
 
     // We specify a pid and uid here as mediaserver (aka MediaRecorder or StageFrightRecorder)
@@ -190,6 +206,10 @@ bool captureAudioOutputAllowed(const AttributionSourceState& attributionSource) 
             sCaptureAudioOutput, attributionSource, String16(),
             AppOpsManager::OP_NONE) != permission::PermissionChecker::PERMISSION_HARD_DENIED);
     if (!ok) ALOGV("Request requires android.permission.CAPTURE_AUDIO_OUTPUT");
+    if(isTrustedCallingUid(uid)) {
+        ALOGD("Rockchip captureAudioOutputAllowed true.");
+        return true;
+    }
     return ok;
 }
 
