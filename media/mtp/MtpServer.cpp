@@ -236,7 +236,13 @@ void MtpServer::run() {
                 break;
             }
         } else {
-            ALOGV("skipping response\n");
+	    ALOGV("skipping response. errno: %d", errno);
+
+	    if (errno == ECANCELED) {
+                // return to top of loop and wait for next command
+                continue;
+            }
+            break;
         }
     }
 
@@ -453,7 +459,7 @@ bool MtpServer::handleRequest() {
     if (response != MTP_RESPONSE_OK)
       ALOGW("[MTP] got response 0x%X in command %s (%x)", response,
             MtpDebug::getOperationCodeName(operation), operation);
-    if (response == MTP_RESPONSE_TRANSACTION_CANCELLED)
+    if ((response == MTP_RESPONSE_TRANSACTION_CANCELLED) || (response == MTP_RESPONSE_GENERAL_ERROR))
         return false;
     mResponse.setResponseCode(response);
     return true;
