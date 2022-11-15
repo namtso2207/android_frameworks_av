@@ -3556,7 +3556,7 @@ audio_unique_id_t AudioFlinger::nextUniqueId(audio_unique_id_use_t use)
         ALOG_ASSERT(audio_unique_id_get_use(base) == AUDIO_UNIQUE_ID_USE_UNSPECIFIED);
         // allow wrap by skipping 0 and -1 for session ids
         if((use == AUDIO_UNIQUE_ID_USE_SESSION) && ((base == 56) || (base == 64) || (base == 72)
-            || (base == 80) || (base == 88))){
+            || (base == 80) || (base == 88) || (base == 96) || (base  == 104))){
             ALOGD("sessionID %d is for special use,continue", base + 1);
             continue;
         }

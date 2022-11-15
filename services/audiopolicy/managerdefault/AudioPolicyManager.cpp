@@ -2526,7 +2526,20 @@ status_t AudioPolicyManager::getInputForAttr(const audio_attributes_t *attr,
         } else {
             // Prevent from storing invalid requested device id in clients
             requestedDeviceId = AUDIO_PORT_HANDLE_NONE;
-            device = mEngine->getInputDeviceForAttributes(attributes, uid, &policyMix);
+            if (attributes.source == AUDIO_SOURCE_CAMCORDER &&
+                    (session == 97 || session == 105)) {
+                if (session == 97) {
+                    device = mAvailableInputDevices.getDevice(
+                        AUDIO_DEVICE_IN_HDMI, String8(""), AUDIO_FORMAT_DEFAULT);
+                } else if (session == 105) {
+                    device = mAvailableInputDevices.getDevice(
+                        AUDIO_DEVICE_IN_HDMI_1, String8(""), AUDIO_FORMAT_DEFAULT);
+                }
+                if (device == nullptr)
+                    device = mEngine->getInputDeviceForAttributes(attributes, uid, &policyMix);
+            } else {
+                device = mEngine->getInputDeviceForAttributes(attributes, uid, &policyMix);
+            }
             ALOGV_IF(device != nullptr, "%s found device type is 0x%X",
                 __FUNCTION__, device->type());
         }
@@ -5215,29 +5228,7 @@ status_t AudioPolicyManager::setSurroundFormatEnabled(audio_format_t audioFormat
                                              AUDIO_FORMAT_DEFAULT);
         profileUpdated |= (status == NO_ERROR);
     }
-#if SUPPORT_MULTIAUDIO
-    DeviceVector hdmi1OutputDevices = mAvailableOutputDevices.getDevicesFromType(
-        AUDIO_DEVICE_OUT_HDMI_1);
-    for (size_t i = 0; i < hdmi1OutputDevices.size(); i++) {
-        // Simulate reconnection to update enabled surround sound formats.
-        String8 address = String8(hdmi1OutputDevices[i]->address().c_str());
-        std::string name = hdmi1OutputDevices[i]->getName();
-        status_t status = setDeviceConnectionStateInt(AUDIO_DEVICE_OUT_HDMI_1,
-                                                      AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE,
-                                                      address.c_str(),
-                                                      name.c_str(),
-                                                      AUDIO_FORMAT_DEFAULT);
-        if (status != NO_ERROR) {
-            continue;
-        }
-        status = setDeviceConnectionStateInt(AUDIO_DEVICE_OUT_HDMI_1,
-                                             AUDIO_POLICY_DEVICE_STATE_AVAILABLE,
-                                             address.c_str(),
-                                             name.c_str(),
-                                             AUDIO_FORMAT_DEFAULT);
-        profileUpdated |= (status == NO_ERROR);
-    }
-#endif
+
     // FIXME: Why doing this for input HDMI devices if we don't augment their reported formats?
     DeviceVector hdmiInputDevices = mAvailableInputDevices.getDevicesFromType(
                 AUDIO_DEVICE_IN_HDMI);
@@ -6733,21 +6724,38 @@ sp<DeviceDescriptor> AudioPolicyManager::getNewInputDevice(
     // If we are not in call and no client is active on this input, this methods returns
     // a null sp<>, causing the patch on the input stream to be released.
     audio_attributes_t attributes;
+    audio_session_t session;
     uid_t uid;
     sp<RecordClientDescriptor> topClient = inputDesc->getHighestPriorityClient();
     if (topClient != nullptr) {
         attributes = topClient->attributes();
+        session = topClient->session();
         uid = topClient->uid();
     } else {
         attributes = { .source = AUDIO_SOURCE_DEFAULT };
         uid = 0;
+        session = (audio_session_t)0;
     }
 
     if (attributes.source == AUDIO_SOURCE_DEFAULT && isInCall()) {
         attributes.source = AUDIO_SOURCE_VOICE_COMMUNICATION;
     }
+
     if (attributes.source != AUDIO_SOURCE_DEFAULT) {
-        device = mEngine->getInputDeviceForAttributes(attributes, uid);
+        if (attributes.source == AUDIO_SOURCE_CAMCORDER &&
+            (session == 97 || session == 105)) {
+            if (session == 97) {
+                device = mAvailableInputDevices.getDevice(
+                    AUDIO_DEVICE_IN_HDMI, String8(""), AUDIO_FORMAT_DEFAULT);
+            } else if (session == 105) {
+                device = mAvailableInputDevices.getDevice(
+                    AUDIO_DEVICE_IN_HDMI_1, String8(""), AUDIO_FORMAT_DEFAULT);
+            }
+            if (device == nullptr)
+                device = mEngine->getInputDeviceForAttributes(attributes, uid);
+        } else {
+            device = mEngine->getInputDeviceForAttributes(attributes, uid);
+        }
     }
 
     return device;
