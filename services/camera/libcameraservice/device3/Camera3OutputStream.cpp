@@ -457,7 +457,7 @@ status_t Camera3OutputStream::returnBufferCheckedLocked(
         // Fix CameraBlob id type discrepancy between HIDL and AIDL, details : http://b/229688810
         if (getFormat() == HAL_PIXEL_FORMAT_BLOB && getDataSpace() == HAL_DATASPACE_V0_JFIF) {
             if (mIPCTransport == IPCTransport::HIDL) {
-                fixUpHidlJpegBlobHeader(anwBuffer, anwReleaseFence);
+                //fixUpHidlJpegBlobHeader(anwBuffer, anwReleaseFence);
             }
             // If this is a JPEG output, and image dump mask is set, save image to
             // disk.
