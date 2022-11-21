@@ -1791,7 +1791,16 @@ Status CameraService::connectHelper(const sp<CALLBACK>& cameraCb, const String8&
     ALOGI("CameraService::connect call (PID %d \"%s\", camera ID %s) and "
             "Camera API version %d", clientPid, clientName8.string(), cameraId.string(),
             static_cast<int>(effectiveApiLevel));
-
+#ifdef HDMI_ENABLE
+    sp<rockchip::hardware::hdmi::V1_0::IHdmi> hdmi= rockchip::hardware::hdmi::V1_0::IHdmi::getService();
+    if(hdmi.get()!= nullptr){
+        ::android::hardware::hidl_string deviceId = cameraId.string();
+        rockchip::hardware::hdmi::V1_0::HdmiAudioStatus audioStatus;
+        audioStatus.status = 1;
+        audioStatus.deviceId = deviceId;
+        hdmi->onAudioChange(audioStatus);
+    }
+#endif
     nsecs_t openTimeNs = systemTime();
 
     sp<CLIENT> client = nullptr;

@@ -65,6 +65,10 @@
 #include "utils/TraceHFR.h"
 #include "utils/CameraServiceProxyWrapper.h"
 
+#ifdef HDMI_ENABLE
+#include <rockchip/hardware/hdmi/1.0/IHdmi.h>
+#endif
+
 #include <algorithm>
 #include <tuple>
 
@@ -239,7 +243,7 @@ status_t Camera3Device::disconnect() {
 
 status_t Camera3Device::disconnectImpl() {
     ATRACE_CALL();
-    ALOGI("%s: E", __FUNCTION__);
+    ALOGI("%s: E deviceId:%s", __FUNCTION__,mId.c_str());
 
     status_t res = OK;
     std::vector<wp<Camera3StreamInterface>> streams;
@@ -315,7 +319,16 @@ status_t Camera3Device::disconnectImpl() {
             mStatusTracker.clear();
             interface = mInterface.get();
         }
-
+#ifdef HDMI_ENABLE
+    sp<rockchip::hardware::hdmi::V1_0::IHdmi> hdmi= rockchip::hardware::hdmi::V1_0::IHdmi::getService();
+    if(hdmi.get()!= nullptr){
+         ::android::hardware::hidl_string deviceId = mId.c_str();
+        rockchip::hardware::hdmi::V1_0::HdmiAudioStatus audioStatus;
+        audioStatus.status = 0;
+        audioStatus.deviceId = deviceId;
+        hdmi->onAudioChange(audioStatus);
+    }
+#endif
         // Call close without internal mutex held, as the HAL close may need to
         // wait on assorted callbacks,etc, to complete before it can return.
         mCameraServiceWatchdog->WATCH(interface->close());
