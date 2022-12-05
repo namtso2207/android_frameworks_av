@@ -118,6 +118,7 @@ static uint32_t gVideoWidth = 0;        // default width+height
 static uint32_t gVideoHeight = 0;
 static uint32_t gBitRate = 20000000;     // 20Mbps
 static uint32_t gTimeLimitSec = kMaxTimeLimitSec;
+static uint32_t gHdmiInLimitSec = 0;
 static uint32_t gBframes = 0;
 static PhysicalDisplayId gPhysicalDisplayId;
 // Set by signal handler to stop recording.
@@ -421,7 +422,12 @@ static status_t runEncoder(const sp<MediaCodec>& encoder,
     ssize_t metaTrackIdx = -1;
     uint32_t debugNumFrames = 0;
     int64_t startWhenNsec = systemTime(CLOCK_MONOTONIC);
-    int64_t endWhenNsec = startWhenNsec + seconds_to_nanoseconds(gTimeLimitSec);
+    int64_t endWhenNsec = startWhenNsec;
+    if (gHdmiInLimitSec > 0) {
+        endWhenNsec += gHdmiInLimitSec * 1000000;
+    } else {
+        endWhenNsec += seconds_to_nanoseconds(gTimeLimitSec);
+    }
     Vector<int64_t> timestamps;
     bool firstFrame = true;
 
@@ -1062,6 +1068,7 @@ int main(int argc, char* const argv[]) {
         { "persistent-surface", no_argument,        NULL, 'p' },
         { "bframes",            required_argument,  NULL, 'B' },
         { "display-id",         required_argument,  NULL, 'd' },
+        { "capture-hdmiin",     required_argument,  NULL, 'c' },
         { NULL,                 0,                  NULL, 0 }
     };
 
@@ -1072,6 +1079,7 @@ int main(int argc, char* const argv[]) {
     }
 
     gPhysicalDisplayId = *displayId;
+    gHdmiInLimitSec = 0;
 
     while (true) {
         int optionIndex = 0;
@@ -1176,6 +1184,9 @@ int main(int argc, char* const argv[]) {
 
             fprintf(stderr, "Invalid physical display ID\n");
             return 2;
+        case 'c':
+            gHdmiInLimitSec = atoi(optarg);
+            break;
         default:
             if (ic != '?') {
                 fprintf(stderr, "getopt_long returned unexpected value 0x%x\n", ic);
@@ -1204,7 +1215,7 @@ int main(int argc, char* const argv[]) {
     }
 
     status_t err = recordScreen(fileName);
-    if (err == NO_ERROR) {
+    if (err == NO_ERROR && gHdmiInLimitSec == 0) {
         // Try to notify the media scanner.  Not fatal if this fails.
         notifyMediaScanner(fileName);
     }
