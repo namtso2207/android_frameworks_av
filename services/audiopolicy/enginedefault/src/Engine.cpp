@@ -211,7 +211,7 @@ void Engine::filterOutputDevicesForStrategy(legacy_strategy strategy,
                 availableOutputDevices.remove(desc->devices().getDevicesFromTypes({
                         AUDIO_DEVICE_OUT_HDMI, AUDIO_DEVICE_OUT_SPDIF,
                         AUDIO_DEVICE_OUT_HDMI_ARC, AUDIO_DEVICE_OUT_HDMI_EARC,
-                        AUDIO_DEVICE_OUT_HDMI_1, AUDIO_DEVICE_OUT_SPDIF_1, }));
+                        VX_ROCKCHIP_OUT_HDMI0, VX_ROCKCHIP_OUT_SPDIF0, }));
             }
         }
         } break;
@@ -392,13 +392,13 @@ DeviceVector Engine::getDevicesForStrategyInt(legacy_strategy strategy,
         }
         //priority Wired > a2dp > hdmi > hdmi 1 > spdif > spdif 1
         if ((devices2.isEmpty()) && (strategy != STRATEGY_SONIFICATION)) {
-            devices2 = availableOutputDevices.getDevicesFromType(AUDIO_DEVICE_OUT_HDMI_1);
+            devices2 = availableOutputDevices.getDevicesFromType(VX_ROCKCHIP_OUT_HDMI0);
         }
         if ((devices2.isEmpty()) && (strategy != STRATEGY_SONIFICATION)) {
             devices2 = availableOutputDevices.getDevicesFromType(AUDIO_DEVICE_OUT_SPDIF);
         }
         if ((devices2.isEmpty()) && (strategy != STRATEGY_SONIFICATION)) {
-            devices2 = availableOutputDevices.getDevicesFromType(AUDIO_DEVICE_OUT_SPDIF_1);
+            devices2 = availableOutputDevices.getDevicesFromType(VX_ROCKCHIP_OUT_SPDIF0);
         }
         if ((devices2.isEmpty()) &&
                 (getForceUse(AUDIO_POLICY_FORCE_FOR_DOCK) == AUDIO_POLICY_FORCE_ANALOG_DOCK)) {

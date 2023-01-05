@@ -2545,7 +2545,7 @@ status_t AudioPolicyManager::getInputForAttr(const audio_attributes_t *attr,
                         AUDIO_DEVICE_IN_HDMI, String8(""), AUDIO_FORMAT_DEFAULT);
                 } else if (session == 105) {
                     device = mAvailableInputDevices.getDevice(
-                        AUDIO_DEVICE_IN_HDMI_1, String8(""), AUDIO_FORMAT_DEFAULT);
+                        VX_ROCKCHIP_IN_HDMI0, String8(""), AUDIO_FORMAT_DEFAULT);
                 }
                 if (device == nullptr)
                     device = mEngine->getInputDeviceForAttributes(attributes, uid, &policyMix);
@@ -5153,7 +5153,7 @@ status_t AudioPolicyManager::getReportedSurroundFormats(unsigned int *numSurroun
         audio_devices_t deviceType = device->type();
         // Enabling/disabling formats are applied to only HDMI devices. So, this function
         // returns formats reported by HDMI devices.
-        if (deviceType != AUDIO_DEVICE_OUT_HDMI && deviceType != AUDIO_DEVICE_OUT_HDMI_1) {
+        if (deviceType != AUDIO_DEVICE_OUT_HDMI && deviceType != VX_ROCKCHIP_OUT_HDMI0) {
             continue;
         }
         // Formats reported by sink devices
@@ -6287,17 +6287,17 @@ SortedVector<audio_io_handle_t> AudioPolicyManager::getOutputsForDevices(
 #if SUPPORT_MULTIAUDIO
     DeviceVector newDevice;
     if ((devices.containsDeviceWithType(AUDIO_DEVICE_OUT_HDMI) &&
-            devices.containsDeviceWithType(AUDIO_DEVICE_OUT_HDMI_1)) ||
+            devices.containsDeviceWithType(VX_ROCKCHIP_OUT_HDMI0)) ||
         (devices.containsDeviceWithType(AUDIO_DEVICE_OUT_HDMI) &&
             devices.containsDeviceWithType(AUDIO_DEVICE_OUT_SPDIF))) {
         newDevice = devices.getDevicesFromType(AUDIO_DEVICE_OUT_HDMI);
-    } else if ((devices.containsDeviceWithType(AUDIO_DEVICE_OUT_HDMI_1) &&
+    } else if ((devices.containsDeviceWithType(VX_ROCKCHIP_OUT_HDMI0) &&
             devices.containsDeviceWithType(AUDIO_DEVICE_OUT_SPDIF)) ||
-            (devices.containsDeviceWithType(AUDIO_DEVICE_OUT_HDMI_1) &&
-            devices.containsDeviceWithType(AUDIO_DEVICE_OUT_SPDIF_1))) {
-        newDevice = devices.getDevicesFromType(AUDIO_DEVICE_OUT_HDMI_1);
+            (devices.containsDeviceWithType(VX_ROCKCHIP_OUT_HDMI0) &&
+            devices.containsDeviceWithType(VX_ROCKCHIP_OUT_SPDIF0))) {
+        newDevice = devices.getDevicesFromType(VX_ROCKCHIP_OUT_HDMI0);
     } else if (devices.containsDeviceWithType(AUDIO_DEVICE_OUT_SPDIF) &&
-            devices.containsDeviceWithType(AUDIO_DEVICE_OUT_SPDIF_1)) {
+            devices.containsDeviceWithType(VX_ROCKCHIP_OUT_SPDIF0)) {
         newDevice = devices.getDevicesFromType(AUDIO_DEVICE_OUT_SPDIF);
     }
     if (!newDevice.isEmpty()) {
@@ -6760,7 +6760,7 @@ sp<DeviceDescriptor> AudioPolicyManager::getNewInputDevice(
                     AUDIO_DEVICE_IN_HDMI, String8(""), AUDIO_FORMAT_DEFAULT);
             } else if (session == 105) {
                 device = mAvailableInputDevices.getDevice(
-                    AUDIO_DEVICE_IN_HDMI_1, String8(""), AUDIO_FORMAT_DEFAULT);
+                    VX_ROCKCHIP_IN_HDMI0, String8(""), AUDIO_FORMAT_DEFAULT);
             }
             if (device == nullptr)
                 device = mEngine->getInputDeviceForAttributes(attributes, uid);
@@ -7741,7 +7741,7 @@ void AudioPolicyManager::updateAudioProfiles(const sp<DeviceDescriptor>& devDesc
         }
         FormatVector formats = formatsFromString(reply.string());
         mReportedFormatsMap[devDesc] = formats;
-        if (device == AUDIO_DEVICE_OUT_HDMI || device == AUDIO_DEVICE_OUT_HDMI_1
+        if (device == AUDIO_DEVICE_OUT_HDMI || device == VX_ROCKCHIP_OUT_HDMI0
                 || isDeviceOfModule(devDesc, AUDIO_HARDWARE_MODULE_ID_MSD)) {
             modifySurroundFormats(devDesc, &formats);
         }
@@ -7775,7 +7775,7 @@ void AudioPolicyManager::updateAudioProfiles(const sp<DeviceDescriptor>& devDesc
             if (repliedParameters.get(
                     String8(AudioParameter::keyStreamSupportedChannels), reply) == NO_ERROR) {
                 channelMasks = channelMasksFromString(reply.string());
-                if (device == AUDIO_DEVICE_OUT_HDMI || device == AUDIO_DEVICE_OUT_HDMI_1
+                if (device == AUDIO_DEVICE_OUT_HDMI || device == VX_ROCKCHIP_OUT_HDMI0
                         || isDeviceOfModule(devDesc, AUDIO_HARDWARE_MODULE_ID_MSD)) {
                     modifySurroundChannelMasks(&channelMasks);
                 }
