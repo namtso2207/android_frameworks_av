@@ -1899,6 +1899,7 @@ void CCodec::stop() {
         comp = state->comp;
     }
     status_t err = comp->stop();
+    mChannel->stopUseOutputSurface();
     if (err != C2_OK) {
         // TODO: convert err into status_t
         mCallback->onError(UNKNOWN_ERROR, ACTION_CODE_FATAL);
@@ -1992,6 +1993,7 @@ void CCodec::release(bool sendCallback) {
         comp = state->comp;
     }
     comp->release();
+    mChannel->stopUseOutputSurface();
 
     {
         Mutexed<State>::Locked state(mState);
