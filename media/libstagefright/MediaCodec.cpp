@@ -1560,7 +1560,8 @@ sp<CodecBase> MediaCodec::GetCodecBase(const AString &name, const char *owner) {
         }
     }
 
-    if (name.startsWithIgnoreCase("c2.")) {
+    if (name.startsWithIgnoreCase("c2.") ||
+        name.startsWithIgnoreCase("omx.c2")) {
         return CreateCCodec();
     } else if (name.startsWithIgnoreCase("omx.")) {
         // at this time only ACodec specifies a mime type.
