@@ -1826,7 +1826,9 @@ MediaPlayerService::AudioOutput::AudioOutput(audio_session_t sessionId,
       mSelectedDeviceId(AUDIO_PORT_HANDLE_NONE),
       mRoutedDeviceId(AUDIO_PORT_HANDLE_NONE),
       mDeviceCallbackEnabled(false),
-      mDeviceCallback(deviceCallback)
+      mDeviceCallback(deviceCallback),
+      mNumFramesPlayedHighBit(0),
+      mLastNumFramesPlayed(0)
 {
     ALOGV("AudioOutput(%d)", sessionId);
     if (attr != NULL) {
@@ -1943,6 +1945,7 @@ int64_t MediaPlayerService::AudioOutput::getPlayedOutDurationUs(int64_t nowUs) c
 
     uint32_t numFramesPlayed;
     int64_t numFramesPlayedAtUs;
+    int64_t totalNumFramesPlayed;
     AudioTimestamp ts;
 
     status_t res = mTrack->getTimestamp(ts);
@@ -1963,9 +1966,14 @@ int64_t MediaPlayerService::AudioOutput::getPlayedOutDurationUs(int64_t nowUs) c
         //ALOGD("getPosition: %u %lld", numFramesPlayed, (long long)numFramesPlayedAtUs);
     }
 
+    if (numFramesPlayed < mLastNumFramesPlayed) {
+        mNumFramesPlayedHighBit++;
+    }
+    totalNumFramesPlayed = (mNumFramesPlayedHighBit << 32) + numFramesPlayed;
+
     // CHECK_EQ(numFramesPlayed & (1 << 31), 0);  // can't be negative until 12.4 hrs, test
     // TODO: remove the (int32_t) casting below as it may overflow at 12.4 hours.
-    int64_t durationUs = (int64_t)((int32_t)numFramesPlayed * 1000000LL / mSampleRateHz)
+    int64_t durationUs = (int64_t)(totalNumFramesPlayed * 1000000LL / mSampleRateHz)
             + nowUs - numFramesPlayedAtUs;
     if (durationUs < 0) {
         // Occurs when numFramesPlayed position is very small and the following:
@@ -1978,6 +1986,8 @@ int64_t MediaPlayerService::AudioOutput::getPlayedOutDurationUs(int64_t nowUs) c
         ALOGV("getPlayedOutDurationUs: negative duration %lld set to zero", (long long)durationUs);
         durationUs = 0;
     }
+    mLastNumFramesPlayed = numFramesPlayed;
+
     ALOGV("getPlayedOutDurationUs(%lld) nowUs(%lld) frames(%u) framesAt(%lld)",
             (long long)durationUs, (long long)nowUs,
             numFramesPlayed, (long long)numFramesPlayedAtUs);
@@ -2470,7 +2480,14 @@ void MediaPlayerService::AudioOutput::flush()
 {
     ALOGV("flush");
     Mutex::Autolock lock(mLock);
-    if (mTrack != 0) mTrack->flush();
+    if (mTrack != 0) {
+        if ((mTrack->getFlags()
+            & (AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD | AUDIO_OUTPUT_FLAG_DIRECT)) == 0) {
+            mNumFramesPlayedHighBit = 0;
+            mLastNumFramesPlayed = 0;
+        }
+        mTrack->flush();
+    }
 }
 
 void MediaPlayerService::AudioOutput::pause()

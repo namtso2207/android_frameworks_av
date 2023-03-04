@@ -187,6 +187,9 @@ class MediaPlayerService : public BnMediaPlayerService
         static bool             mIsOnEmulator;
         static int              mMinBufferCount;  // 12 for emulator; otherwise 4
 
+        mutable int64_t         mNumFramesPlayedHighBit;
+        mutable uint32_t        mLastNumFramesPlayed;
+
         // CallbackData is what is passed to the AudioTrack as the "user" data.
         // We need to be able to target this to a different Output on the fly,
         // so we can't use the Output itself for this.
