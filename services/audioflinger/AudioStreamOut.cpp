@@ -206,7 +206,9 @@ int AudioStreamOut::standby()
 {
     mRenderPosition = 0;
     mExpectRetrograde = false;
-    mFramesWrittenAtStandby = mFramesWritten;
+    if (AUDIO_FORMAT_IEC61937 != mConfigFormat) {
+        mFramesWrittenAtStandby = mFramesWritten;
+    }
     return stream->standby();
 }
 
