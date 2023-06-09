@@ -52,10 +52,6 @@
 #include "AudioPolicyManager.h"
 #include "TypeConverter.h"
 
-#if SUPPORT_MULTIAUDIO
-#include <media/RKMultiAudio.h>
-#endif
-
 namespace android {
 
 using android::media::audio::common::AudioDevice;
@@ -1235,21 +1231,6 @@ status_t AudioPolicyManager::getOutputForAttrInt(
     // explicit routing managed by getDeviceForStrategy in APM is now handled by engine
     // in order to let the choice of the order to future vendor engine
     outputDevices = mEngine->getOutputDevicesForAttributes(*resultAttr, requestedDevice, false);
-
-#if SUPPORT_MULTIAUDIO
-    audio_session_t sessionid = session;
-    audio_port_handle_t deviceId = requestedPortId;
-    audio_stream_type_t streamType = *stream;
-    bool boo = false;
-    audio_devices_t device = AUDIO_DEVICE_OUT_SPEAKER;
-    multiaudio_D(sessionid, &deviceId, streamType, &boo, &device);
-    if (device != (audio_devices_t)0) {
-        outputDevices = mAvailableOutputDevices.getDevicesFromType(device);
-        if (outputDevices.isEmpty()) {
-            outputDevices = mEngine->getOutputDevicesForAttributes(*resultAttr, requestedDevice, false);
-        }
-    }
-#endif
 
     if ((resultAttr->flags & AUDIO_FLAG_HW_AV_SYNC) != 0) {
         *flags = (audio_output_flags_t)(*flags | AUDIO_OUTPUT_FLAG_HW_AV_SYNC);
@@ -2548,20 +2529,7 @@ status_t AudioPolicyManager::getInputForAttr(const audio_attributes_t *attr,
         } else {
             // Prevent from storing invalid requested device id in clients
             requestedDeviceId = AUDIO_PORT_HANDLE_NONE;
-            if (attributes.source == AUDIO_SOURCE_CAMCORDER &&
-                    (session == 97 || session == 105)) {
-                if (session == 97) {
-                    device = mAvailableInputDevices.getDevice(
-                        AUDIO_DEVICE_IN_HDMI, String8(""), AUDIO_FORMAT_DEFAULT);
-                } else if (session == 105) {
-                    device = mAvailableInputDevices.getDevice(
-                        VX_ROCKCHIP_IN_HDMI0, String8(""), AUDIO_FORMAT_DEFAULT);
-                }
-                if (device == nullptr)
-                    device = mEngine->getInputDeviceForAttributes(attributes, uid, &policyMix);
-            } else {
-                device = mEngine->getInputDeviceForAttributes(attributes, uid, &policyMix);
-            }
+            device = mEngine->getInputDeviceForAttributes(attributes, uid, &policyMix);
             ALOGV_IF(device != nullptr, "%s found device type is 0x%X",
                 __FUNCTION__, device->type());
         }
@@ -6757,17 +6725,14 @@ sp<DeviceDescriptor> AudioPolicyManager::getNewInputDevice(
     // If we are not in call and no client is active on this input, this methods returns
     // a null sp<>, causing the patch on the input stream to be released.
     audio_attributes_t attributes;
-    audio_session_t session;
     uid_t uid;
     sp<RecordClientDescriptor> topClient = inputDesc->getHighestPriorityClient();
     if (topClient != nullptr) {
         attributes = topClient->attributes();
-        session = topClient->session();
         uid = topClient->uid();
     } else {
         attributes = { .source = AUDIO_SOURCE_DEFAULT };
         uid = 0;
-        session = (audio_session_t)0;
     }
 
     if (attributes.source == AUDIO_SOURCE_DEFAULT && isInCall()) {
@@ -6775,20 +6740,7 @@ sp<DeviceDescriptor> AudioPolicyManager::getNewInputDevice(
     }
 
     if (attributes.source != AUDIO_SOURCE_DEFAULT) {
-        if (attributes.source == AUDIO_SOURCE_CAMCORDER &&
-            (session == 97 || session == 105)) {
-            if (session == 97) {
-                device = mAvailableInputDevices.getDevice(
-                    AUDIO_DEVICE_IN_HDMI, String8(""), AUDIO_FORMAT_DEFAULT);
-            } else if (session == 105) {
-                device = mAvailableInputDevices.getDevice(
-                    VX_ROCKCHIP_IN_HDMI0, String8(""), AUDIO_FORMAT_DEFAULT);
-            }
-            if (device == nullptr)
-                device = mEngine->getInputDeviceForAttributes(attributes, uid);
-        } else {
-            device = mEngine->getInputDeviceForAttributes(attributes, uid);
-        }
+        device = mEngine->getInputDeviceForAttributes(attributes, uid);
     }
 
     return device;

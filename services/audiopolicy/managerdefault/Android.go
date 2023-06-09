@@ -25,7 +25,6 @@ func Defaults(ctx android.LoadHookContext) {
 
     p := &props{}
     p.Cflags = getCflags(ctx)
-    p.Shared_libs = getShared_libs(ctx)
     ctx.AppendProperties(p)
 }
 
@@ -37,14 +36,4 @@ func getCflags(ctx android.BaseContext) ([]string) {
     }
 
     return cppflags
-}
-
-func getShared_libs(ctx android.BaseContext) ([]string) {
-    var libs []string
-
-    if (ctx.AConfig().IsEnvTrue("BOARD_SUPPORT_MULTIAUDIO")) {
-        libs = append(libs, "librkmultiaudio")
-    }
-
-    return libs
 }

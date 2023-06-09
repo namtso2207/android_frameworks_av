@@ -35,7 +35,7 @@
 #include "android/media/IAudioTrack.h"
 #include "android/media/IAudioTrackCallback.h"
 
-#define MultiAudioTest 0
+#define MultiAudioTest 1
 namespace android {
 
 using content::AttributionSourceState;

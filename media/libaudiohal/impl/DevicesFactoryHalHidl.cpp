@@ -86,13 +86,13 @@ static IDevicesFactory::Device idFromHal(const char *name, status_t* status) {
     if (strcmp(name, AUDIO_HARDWARE_MODULE_ID_PRIMARY) == 0) {
         return IDevicesFactory::Device::PRIMARY;
 #if SUPPORT_MULTIAUDIO
-    } else if(strcmp(name, AUDIO_HARDWARE_MODULE_ID_HDMI) == 0) {
+    } else if(strcmp(name, AUDIO_HARDWARE_MODULE_ID_EXT_1) == 0) {
         return (IDevicesFactory::Device)5;
-    } else if(strcmp(name, AUDIO_HARDWARE_MODULE_ID_SPDIF) == 0) {
+    } else if(strcmp(name, AUDIO_HARDWARE_MODULE_ID_EXT_2) == 0) {
         return (IDevicesFactory::Device)6;
-    } else if(strcmp(name, AUDIO_HARDWARE_MODULE_ID_HDMI_1) == 0) {
+    } else if(strcmp(name, AUDIO_HARDWARE_MODULE_ID_EXT_3) == 0) {
         return (IDevicesFactory::Device)7;
-    } else if(strcmp(name, AUDIO_HARDWARE_MODULE_ID_SPDIF_1) == 0) {
+    } else if(strcmp(name, AUDIO_HARDWARE_MODULE_ID_EXT_4) == 0) {
         return (IDevicesFactory::Device)8;
 #endif
     } else if(strcmp(name, AUDIO_HARDWARE_MODULE_ID_A2DP) == 0) {

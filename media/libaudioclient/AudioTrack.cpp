@@ -41,7 +41,6 @@
 #include <media/TypeConverter.h>
 
 #if SUPPORT_MULTIAUDIO
-#include <media/RKMultiAudio.h>
 #include <binder/PermissionController.h>
 #endif
 
@@ -572,6 +571,56 @@ status_t AudioTrack::set(
     } else {
         mPackageName = String16("default");
     }
+    String8 tmp = String8(mPackageName);
+    unsigned int numPorts;
+    unsigned int generation1;
+    unsigned int generation;
+    struct audio_port_v7 *audioPorts = nullptr;
+    int attempts = 10;
+    do {
+        if (attempts-- < 0) {
+            free(audioPorts);
+            ALOGE("Query audio ports time out");
+            break;
+        }
+        numPorts = 0;
+        status = AudioSystem::listAudioPorts(
+                AUDIO_PORT_ROLE_SINK, AUDIO_PORT_TYPE_DEVICE, &numPorts, nullptr,
+                &generation1);
+        if (numPorts == 0 || status != NO_ERROR) {
+            free(audioPorts);
+            ALOGE("Number of audio ports should not be zero");
+            break;
+        }
+        audioPorts = (struct audio_port_v7 *)realloc(
+                    audioPorts, numPorts * sizeof(struct audio_port_v7));
+        status = AudioSystem::listAudioPorts(
+                AUDIO_PORT_ROLE_SINK, AUDIO_PORT_TYPE_DEVICE, &numPorts, audioPorts,
+                &generation);
+        if (status != NO_ERROR) {
+            free(audioPorts);
+            ALOGE("Query audio ports failed");
+        }
+    } while (generation1 != generation);
+    for (int i = 0 ; i < numPorts; i++) {
+        ALOGD("listDeviceType: %d type:0x%x addr:%s id:%d", i,
+            audioPorts[i].ext.device.type, audioPorts[i].ext.device.address, audioPorts[i].id);
+        if (strstr(audioPorts[i].ext.device.address, "speaker0") != nullptr
+            && audioPorts[i].ext.device.type == AUDIO_DEVICE_OUT_SPEAKER
+            && strstr(tmp.string(), "RockVideoPlayer")) {
+           if (streamType == AUDIO_STREAM_MUSIC) {
+                selectedDeviceId = audioPorts[i].id;
+                ALOGD("select id:%d", selectedDeviceId);
+           }
+        } else if (audioPorts[i].ext.device.type == AUDIO_DEVICE_OUT_HDMI
+                        && strstr(tmp.string(), "gallery3d") != nullptr) {
+           if (streamType == AUDIO_STREAM_MUSIC) {
+                selectedDeviceId = audioPorts[i].id;
+                ALOGD("select id:%d", selectedDeviceId);
+           }
+        }
+    }
+    free(audioPorts);
 #endif
 #endif
     // Note mPortId is not valid until the track is created, so omit mPortId in ALOG for set.
@@ -1808,6 +1857,12 @@ status_t AudioTrack::setOutputDevice(audio_port_handle_t deviceId) {
     AutoMutex lock(mLock);
     ALOGV("%s(%d): deviceId=%d mSelectedDeviceId=%d mRoutedDeviceId %d",
             __func__, mPortId, deviceId, mSelectedDeviceId, mRoutedDeviceId);
+#if SUPPORT_MULTIAUDIO
+#if MultiAudioTest
+    if (deviceId == AUDIO_PORT_HANDLE_NONE)
+        return NO_ERROR;
+#endif
+#endif
     if (mSelectedDeviceId != deviceId) {
         mSelectedDeviceId = deviceId;
         if (mStatus == NO_ERROR && mSelectedDeviceId != mRoutedDeviceId) {
@@ -1977,35 +2032,11 @@ status_t AudioTrack::createTrack_l()
                         max(mMaxRequiredSpeed, mPlaybackRate.mSpeed);
     }
 
-#if SUPPORT_MULTIAUDIO
-    audio_session_t sessionid = mSessionId;
-#if MultiAudioTest
-    String8 tmp = String8(mPackageName);
-    if (strstr(tmp.string(), "RockVideoPlayer")) {
-        sessionid = (audio_session_t)65;
-    } else if (strstr(tmp.string(), "gallery3d")) {
-        sessionid = (audio_session_t)81;
-    } else if (strstr(tmp.string(), "mxtech")) {
-        sessionid = (audio_session_t)57;
-    }
-#endif
-    audio_port_handle_t deviceId = mSelectedDeviceId;
-    audio_stream_type_t streamType = mStreamType;
-    bool boo = false;
-    audio_devices_t device = AUDIO_DEVICE_OUT_SPEAKER;
-    multiaudio_A(sessionid, &deviceId, streamType, &boo, &device);
-#endif
-
     input.flags = mFlags;
     input.frameCount = mReqFrameCount;
     input.notificationFrameCount = mNotificationFramesReq;
     input.selectedDeviceId = mSelectedDeviceId;
-
-#if SUPPORT_MULTIAUDIO
-    input.sessionId = sessionid;
-# else
     input.sessionId = mSessionId;
-#endif
     input.audioTrackCallback = mAudioTrackCallback;
 
     media::CreateTrackResponse response;
@@ -2032,15 +2063,6 @@ status_t AudioTrack::createTrack_l()
     mRoutedDeviceId = output.selectedDeviceId;
     mSessionId = output.sessionId;
     mStreamType = output.streamType;
-
-#if SUPPORT_MULTIAUDIO
-    sessionid = mSessionId;
-    deviceId = mRoutedDeviceId;
-    streamType = mStreamType;
-    //boo = false;
-    //device = AUDIO_DEVICE_OUT_SPEAKER;
-    multiaudio_B(sessionid, &deviceId, streamType, &boo, &device);
-#endif
 
     mSampleRate = output.sampleRate;
     if (mOriginalSampleRate == 0) {
@@ -2101,7 +2123,6 @@ status_t AudioTrack::createTrack_l()
                   __func__, mPortId, mReqFrameCount, mFrameCount);
         }
     }
-
     mFlags = output.flags;
 
     //mOutput != output includes the case where mOutput == AUDIO_IO_HANDLE_NONE for first creation

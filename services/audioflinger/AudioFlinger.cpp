@@ -710,10 +710,10 @@ status_t AudioFlinger::removeEffectFromHal(audio_port_handle_t deviceId,
 static const char * const audio_interfaces[] = {
     AUDIO_HARDWARE_MODULE_ID_PRIMARY,
 #if SUPPORT_MULTIAUDIO
-    AUDIO_HARDWARE_MODULE_ID_HDMI,
-    AUDIO_HARDWARE_MODULE_ID_HDMI_1,
-    AUDIO_HARDWARE_MODULE_ID_SPDIF,
-    AUDIO_HARDWARE_MODULE_ID_SPDIF_1,
+    AUDIO_HARDWARE_MODULE_ID_EXT_1,
+    AUDIO_HARDWARE_MODULE_ID_EXT_2,
+    AUDIO_HARDWARE_MODULE_ID_EXT_3,
+    AUDIO_HARDWARE_MODULE_ID_EXT_4,
 #endif
     AUDIO_HARDWARE_MODULE_ID_A2DP,
     AUDIO_HARDWARE_MODULE_ID_USB,
@@ -3651,18 +3651,13 @@ audio_unique_id_t AudioFlinger::nextUniqueId(audio_unique_id_use_t use)
 {
     // This is the internal API, so it is OK to assert on bad parameter.
     LOG_ALWAYS_FATAL_IF((unsigned) use >= (unsigned) AUDIO_UNIQUE_ID_USE_MAX);
-    const int maxRetries = use == AUDIO_UNIQUE_ID_USE_SESSION ? 10 : 1;
+    const int maxRetries = use == AUDIO_UNIQUE_ID_USE_SESSION ? 3 : 1;
     for (int retry = 0; retry < maxRetries; retry++) {
         // The cast allows wraparound from max positive to min negative instead of abort
         uint32_t base = (uint32_t) atomic_fetch_add_explicit(&mNextUniqueIds[use],
                 (uint_fast32_t) AUDIO_UNIQUE_ID_USE_MAX, memory_order_acq_rel);
         ALOG_ASSERT(audio_unique_id_get_use(base) == AUDIO_UNIQUE_ID_USE_UNSPECIFIED);
         // allow wrap by skipping 0 and -1 for session ids
-        if((use == AUDIO_UNIQUE_ID_USE_SESSION) && ((base == 56) || (base == 64) || (base == 72)
-            || (base == 80) || (base == 88) || (base == 96) || (base  == 104))){
-            ALOGD("sessionID %d is for special use,continue", base + 1);
-            continue;
-        }
         if (!(base == 0 || base == (~0u & ~AUDIO_UNIQUE_ID_USE_MASK))) {
             ALOGW_IF(retry != 0, "unique ID overflow for use %d", use);
             return (audio_unique_id_t) (base | use);
